@@ -40,7 +40,32 @@ resource "helm_release" "prometheus_stack" {
         service = {
           type = "ClusterIP"
         }
+        # Expose Grafana via nginx Ingress
+        ingress = {
+          enabled          = true
+          ingressClassName = "nginx"
+          hosts            = ["grafana.${var.environment}.interviewsync.example.com"]
+          annotations = {
+            "nginx.ingress.kubernetes.io/proxy-body-size" = "10m"
+          }
+        }
+        # Grafana reads Prometheus as datasource automatically (kube-prometheus-stack wires it)
       }
+
+      prometheus = {
+        prometheusSpec = {
+          # Watch PrometheusRule resources in ALL namespaces (not just monitoring)
+          # Required so the backend Helm chart's PrometheusRule is picked up
+          ruleNamespaceSelector = {}
+          # Match PrometheusRules with label release: kube-prometheus-stack
+          ruleSelector = {
+            matchLabels = {
+              release = "kube-prometheus-stack"
+            }
+          }
+        }
+      }
+
       alertmanager = {
         config = {
           global = {
@@ -77,7 +102,7 @@ resource "helm_release" "prometheus_stack" {
     })
   ]
 
-  depends_on = [module.eks]
+  depends_on = [module.eks, helm_release.nginx_ingress]
 }
 
 # ── 3. ArgoCD ─────────────────────────────────────────────────────────────────
@@ -98,11 +123,20 @@ resource "helm_release" "argocd" {
         service = {
           type = "ClusterIP"
         }
+        # Expose ArgoCD UI via nginx Ingress
+        ingress = {
+          enabled          = true
+          ingressClassName = "nginx"
+          hosts            = ["argocd.${var.environment}.interviewsync.example.com"]
+          annotations = {
+            "nginx.ingress.kubernetes.io/backend-protocol" = "HTTP"
+          }
+        }
       }
     })
   ]
 
-  depends_on = [module.eks]
+  depends_on = [module.eks, helm_release.nginx_ingress]
 }
 
 # ── 4. AWS for Fluent Bit (CloudWatch logs) ───────────────────────────────────
