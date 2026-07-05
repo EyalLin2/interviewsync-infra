@@ -108,22 +108,13 @@ resource "helm_release" "argocd" {
 # ── 4. AWS for Fluent Bit (CloudWatch logs) ───────────────────────────────────
 # DaemonSet that ships every pod's stdout/stderr to CloudWatch Logs
 # Log group: /eks/<environment>-interviewsync
-
-resource "aws_iam_role" "fluent_bit" {
-  name = "${var.environment}-interviewsync-fluent-bit"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
+#
+# Permissions: attach CloudWatchAgentServerPolicy directly to the EKS node
+# group IAM role — Fluent Bit runs as a DaemonSet on each node and inherits
+# the node's instance profile. No separate IRSA role needed.
 
 resource "aws_iam_role_policy_attachment" "fluent_bit_cloudwatch" {
-  role       = aws_iam_role.fluent_bit.name
+  role       = module.eks.eks_managed_node_groups["default"].iam_role_name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
 }
 

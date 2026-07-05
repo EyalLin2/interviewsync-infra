@@ -1,0 +1,20 @@
+# Terraform state — never commit (contains secrets + resource IDs)
+*.tfstate
+*.tfstate.backup
+*.tfstate.lock.info
+
+# Terraform working dir
+.terraform/
+.terraform.lock.hcl
+
+# Secret variable files — pass via TF_VAR_* env vars or CI secrets instead
+*.auto.tfvars
+*secrets*.tfvars
+*secret*.tfvars
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
